@@ -1,5 +1,5 @@
 /*
-	SQLite Improved v0.9 by Slice
+	SQLite Improved v0.9.1 by Slice
 	
 	Changelog:
 			2012-08-27:
@@ -560,7 +560,7 @@ stock DB::LazyInitialize() {
 	bIsInitialized = true;
 	
 	#if defined HTTP
-		HTTP(0x7FEDCBA0, HTTP_GET, !"spelsajten.net/sqlitei_version.php?version=090", "", !"DB_VersionCheckReponse");
+		HTTP(0x7FEDCBA0, HTTP_GET, !"spelsajten.net/sqlitei_version.php?version=091", "", !"DB_VersionCheckReponse");
 	#endif
 }
 
