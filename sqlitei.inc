@@ -367,12 +367,16 @@ const
 	#endif
 #endif
 
+// Has to be defined after statement functions.
+stock DBResult:db_query_hook(iTagOf3 = tagof(_bAutoRelease), DB:db, const szQuery[], {bool, DBDataType}:_bAutoRelease = true, {DBDataType, QQPA}:...);
+
 forward DB::funcinc();
 public DB::funcinc() {
 	strcat(gs_szBuffer, "");
 	strpack(gs_szBuffer, "");
 	ispacked(gs_szBuffer);
 	db_get_field(DBResult:0, 0, gs_szBuffer, 0);
+	db_query(DB:0,"");
 }
 
 static stock DB::CompressArray(const aiArray[], iSize = sizeof(aiArray), aiOutput[]) {
@@ -607,9 +611,6 @@ stock bool:db_is_valid_persistent(DB:db) {
 	
 	return false;
 }
-
-// Has to be defined after statement functions.
-stock DBResult:db_query_hook(iTagOf3 = tagof(_bAutoRelease), DB:db, const szQuery[], {bool, DBDataType}:_bAutoRelease = true, {DBDataType, QQPA}:...);
 
 stock db_rewind(DBResult:dbrResult) {
 	if (dbrResult == DB::INVALID_RESULT) {
