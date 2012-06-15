@@ -1,8 +1,11 @@
 /*
-	SQLite Improved v0.9.1 by Slice
+	SQLite Improved v0.9.2 by Slice
 	
 	Changelog:
-			2012-08-27:
+			2012-06-15:
+				* Fix compiler crash when db_query isn't used.
+			
+			2012-05-27:
 				* Always throw warnings when invalid results are given to SQLitei functions.
 				* Even more improvements to stability!
 				* GetAmxBase is now updated with a JIT compatible version (all credits to Zeex).
@@ -564,7 +567,7 @@ stock DB::LazyInitialize() {
 	bIsInitialized = true;
 	
 	#if defined HTTP
-		HTTP(0x7FEDCBA0, HTTP_GET, !"spelsajten.net/sqlitei_version.php?version=091", "", !"DB_VersionCheckReponse");
+		HTTP(0x7FEDCBA0, HTTP_GET, !"spelsajten.net/sqlitei_version.php?version=092", "", !"DB_VersionCheckReponse");
 	#endif
 }
 
