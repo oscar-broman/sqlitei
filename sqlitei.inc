@@ -782,7 +782,7 @@ stock DB:db_open_persistent(const szName[]) {
 	gs_PersistentDatabases[iIndex][e_szName][0]  = 0;
 	
 	if (gs_iClosePersistentTimer == -1)
-		gs_iClosePersistentTimer = SetTimer("db_close_persistent", 3000, false);
+		gs_iClosePersistentTimer = SetTimer("db_close_persistent", 0, false);
 	
 	strpack(gs_PersistentDatabases[iIndex][e_szName], szName, _:e_bIsUsed);
 	
@@ -1990,7 +1990,7 @@ stock DBResult:db_query_hook(iTagOf3 = tagof(_bAutoRelease), DB:db, const szQuer
 			}
 			
 			if (gs_iClosePersistentTimer == -1)
-				gs_iClosePersistentTimer = SetTimer("db_close_persistent", 3000, false);
+				gs_iClosePersistentTimer = SetTimer("db_close_persistent", 0, false);
 		}
 		
 		db = gs_PersistentDatabases[iIndex][e_dbDatabase];
