@@ -1,7 +1,10 @@
 /*
-	SQLite Improved v0.9.3 by Slice
+	SQLite Improved v0.9.4 by Slice
 	
 	Changelog:
+			2012-07-21:
+				* Fix crash happening on Linux related to NULL values in db_free_result.
+			
 			2012-07-15:
 				* Improvements to persistent databases.
 			
@@ -570,7 +573,7 @@ stock DB::LazyInitialize() {
 	bIsInitialized = true;
 	
 	#if defined HTTP
-		HTTP(0x7FEDCBA0, HTTP_GET, !"spelsajten.net/sqlitei_version.php?version=093", "", !"DB_VersionCheckReponse");
+		HTTP(0x7FEDCBA0, HTTP_GET, !"spelsajten.net/sqlitei_version.php?version=094", "", !"DB_VersionCheckReponse");
 	#endif
 }
 
@@ -895,18 +898,68 @@ stock db_free_result_hook(DBResult:dbrResult) {
 	}
 
 	new
-		iAddress = _:dbrResult - DB::GetAmxBaseRelative() + 16,
+		iFreeTestAddress = _:dbrResult - DB::GetAmxBaseRelative() + 16,
 		iData
 	;
 	
-	#emit LREF.S.pri  iAddress
+	#emit LREF.S.pri  iFreeTestAddress
 	#emit STOR.S.pri  iData
 	
 	if (iData != 0xFFFFFFFF) {
+		new
+			iResultAddress = _:dbrResult - DB::GetAmxBaseRelative(),
+			iAddress,
+			iRows,
+			iCols,
+			iDataAddress,
+			iOffset,
+			iNullAddress
+		;
+
+		#emit CONST.pri   gs_szNull
+		#emit STOR.S.pri  iNullAddress
+		
+		iNullAddress +=  DB::GetAmxBaseRelative();
+		
+		iAddress = iResultAddress;
+
+		#emit LREF.S.pri  iAddress
+		#emit STOR.S.pri  iRows
+		
+		iAddress += 4;
+
+		#emit LREF.S.pri  iAddress
+		#emit STOR.S.pri  iCols
+		
+		iAddress += 4;
+
+		#emit LREF.S.pri  iAddress
+		#emit STOR.S.pri  iDataAddress
+		
+		iDataAddress -= DB::GetAmxBaseRelative();
+		
+		iOffset = (iCols + iRows * iCols) * 4 - 4;
+		
+		while (iOffset >= 0) {
+			iAddress = iDataAddress + iOffset;
+			
+			#emit LREF.S.pri  iAddress
+			#emit STOR.S.pri  iAddress
+			
+			if (iAddress == iNullAddress) {
+				iAddress = iDataAddress + iOffset;
+				
+				#emit CONST.pri   0
+				#emit SREF.S.pri  iAddress
+			}
+			
+			iOffset -= 4;
+		}
+		
 		db_free_result@(dbrResult);
 		
 		#emit CONST.pri   0xFFFFFFFF
-		#emit SREF.S.pri  iAddress
+		#emit SREF.S.pri  iFreeTestAddress
 		
 		return true;
 	} else {
@@ -2495,9 +2548,13 @@ public db_drain_autofree_pool() {
 	
 	for (new i = gs_iAutoFreeResultsIndex; i--; ) {
 		if (gs_adbrAutoFreeResults[i]) {
-			DB::Debug("(db_drain_autofree_pool) Autofreeing 0x%04x%04x", _:gs_adbrAutoFreeResults[i] >>> 16, _:gs_adbrAutoFreeResults[i] & 0xFFFF);
+			new DBResult:result = gs_adbrAutoFreeResults[i];
 			
-			db_free_result@(gs_adbrAutoFreeResults[i]);
+			gs_adbrAutoFreeResults[i] = DB::INVALID_RESULT;
+			
+			DB::Debug("(db_drain_autofree_pool) Autofreeing 0x%04x%04x", _:result >>> 16, _:result & 0xFFFF);
+			
+			db_free_result_hook(result);
 		}
 	}
 	
@@ -2522,11 +2579,13 @@ public db_free_stmt_results() {
 		if (gs_Statements[i][e_dbDatabase]
 		 && gs_Statements[i][e_bAutoFreeResult]
 		 && gs_Statements[i][e_dbrResult] != DB::INVALID_RESULT) {
-			DB::Debug("(db_free_stmt_results) Freeing 0x%04x%04x for %d.", _:gs_Statements[i][e_dbrResult] >>> 16, _:gs_Statements[i][e_dbrResult] & 0xFFFF, _:i);
-			
-			db_free_result@(gs_Statements[i][e_dbrResult]);
+			new DBResult:result = gs_Statements[i][e_dbrResult];
 			
 			gs_Statements[i][e_dbrResult] = DB::INVALID_RESULT;
+			
+			DB::Debug("(db_free_stmt_results) Freeing 0x%04x%04x for %d.", _:result >>> 16, _:result & 0xFFFF, _:i);
+			
+			db_free_result_hook(result);
 		}
 	}
 }
