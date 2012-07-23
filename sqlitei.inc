@@ -1,7 +1,10 @@
 /*
-	SQLite Improved v0.9.4 by Slice
+	SQLite Improved v0.9.5 by Slice
 	
 	Changelog:
+			2012-07-23:
+				* Fix problem with persistent databases (hopefully).
+			
 			2012-07-21:
 				* Fix crash happening on Linux related to NULL values in db_free_result.
 			
@@ -573,7 +576,7 @@ stock DB::LazyInitialize() {
 	bIsInitialized = true;
 	
 	#if defined HTTP
-		HTTP(0x7FEDCBA0, HTTP_GET, !"spelsajten.net/sqlitei_version.php?version=094", "", !"DB_VersionCheckReponse");
+		HTTP(0x7FEDCBA0, HTTP_GET, !"spelsajten.net/sqlitei_version.php?version=095", "", !"DB_VersionCheckReponse");
 	#endif
 }
 
@@ -2596,7 +2599,7 @@ public db_close_persistent() {
 	
 	for (new i = 0; i < sizeof(gs_PersistentDatabases); i++) {
 		if (gs_PersistentDatabases[i][e_bIsUsed] && gs_PersistentDatabases[i][e_dbDatabase]) {
-			db_close(gs_PersistentDatabases[i][e_dbDatabase]);
+			db_close@(gs_PersistentDatabases[i][e_dbDatabase]);
 			
 			gs_PersistentDatabases[i][e_dbDatabase] = DB:0;
 		}
