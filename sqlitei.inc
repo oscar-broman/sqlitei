@@ -624,6 +624,27 @@ stock bool:db_is_valid_persistent(DB:db) {
 	return false;
 }
 
+stock bool:db_is_table_exists(DB:db, const szTable[])
+{
+	new
+		DBResult:dbrResult
+	;
+	
+	format(gs_szBuffer, sizeof(gs_szBuffer), "SELECT name FROM sqlite_master WHERE type = 'table' AND tbl_name = '%s'", szTable);
+	
+	dbrResult = db_query(db, gs_szBuffer, false);
+	
+	if (db_num_fields(dbrResult)) {
+		db_free_result(dbrResult);
+		
+		return true;
+	}
+	
+	db_free_result(dbrResult);
+	
+	return false;
+}
+
 stock db_rewind(DBResult:dbrResult) {
 	if (dbrResult == DB::INVALID_RESULT) {
 		DB::Notice("(db_rewind) Invalid result given.");
@@ -631,7 +652,7 @@ stock db_rewind(DBResult:dbrResult) {
 		return false;
 	}
 	
-	db_set_row_index(dbrResult, 0);
+	return db_set_row_index(dbrResult, 0);
 }
 
 stock bool:db_exec(DB:db, const szQuery[]) {
@@ -1017,7 +1038,7 @@ stock db_end_transaction(DB:db)
 	return db_exec(db, !"COMMIT");
 
 stock db_set_asynchronous(DB:db, bool:bSet = true) {
-	db_set_synchronous(DB:db, bSet ? DB::SYNCHRONOUS_OFF : DB::SYNCHRONOUS_OFF);
+	db_set_synchronous(DB:db, bSet ? DB::SYNCHRONOUS_OFF : DB::SYNCHRONOUS_FULL);
 }
 
 stock db_set_synchronous(DB:db, DB::e_SYNCHRONOUS_MODE:iValue) {
@@ -1151,13 +1172,13 @@ stock Float:db_get_field_float(DBResult:dbrResult, iField = 0) {
 	if (!db_num_rows(dbrResult)) {
 		DB::Notice("(db_get_field_int) Empty result given.");
 
-		return 0;
+		return 0.0;
 	}
 
 	if (iField < 0 || db_num_fields(dbrResult) <= iField) {
 		DB::Notice("(db_get_field_int) Given field index doesn't exist in the result.");
 
-		return 0;
+		return 0.0;
 	}
 	
 	db_get_field(dbrResult, iField, gs_szBuffer, sizeof(gs_szBuffer) - 1);
