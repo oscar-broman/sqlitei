@@ -645,7 +645,7 @@ stock bool:db_is_table_exists(DB:db, const szTable[])
 	return false;
 }
 
-stock db_rewind(DBResult:dbrResult) {
+stock bool:db_rewind(DBResult:dbrResult) {
 	if (dbrResult == DB::INVALID_RESULT) {
 		DB::Notice("(db_rewind) Invalid result given.");
 		
@@ -740,7 +740,7 @@ stock db_set_struct_info(DB:db, {_, e_SQLITE3}:iOffset, iValue) {
 	#emit SREF.S.pri  iAddress
 }
 
-stock db_set_row_index(DBResult:dbrResult, iRow) {
+stock bool:db_set_row_index(DBResult:dbrResult, iRow) {
 	if (dbrResult == DB::INVALID_RESULT) {
 		DB::Notice("(db_set_row_index) Invalid result given.");
 		
@@ -904,7 +904,7 @@ stock db_is_result_freed(DBResult:dbrResult) {
 	return (iData == 0xFFFFFFFF);
 }
 
-stock db_free_result_hook(DBResult:dbrResult) {
+stock bool:db_free_result_hook(DBResult:dbrResult) {
 	if (dbrResult == DB::INVALID_RESULT) {
 		DB::Notice("(db_free_result_hook) Invalid result given.");
 		
@@ -1041,7 +1041,7 @@ stock db_set_asynchronous(DB:db, bool:bSet = true) {
 	db_set_synchronous(DB:db, bSet ? DB::SYNCHRONOUS_OFF : DB::SYNCHRONOUS_FULL);
 }
 
-stock db_set_synchronous(DB:db, DB::e_SYNCHRONOUS_MODE:iValue) {
+stock bool:db_set_synchronous(DB:db, DB::e_SYNCHRONOUS_MODE:iValue) {
 	if (0 <= _:iValue <= 2) {
 		format(gs_szBuffer, sizeof(gs_szBuffer), "PRAGMA synchronous = %d", _:iValue);
 	
@@ -1286,24 +1286,24 @@ stock DBStatement:db_prepare(DB:db, const szQuery[]) {
 	
 	gs_Statements[stStatement][e_szQuery][0] = 0;
 	
-	if (!ispacked(szQuery)) {
+	if (ispacked(szQuery)) {
 #if DB_DEBUG
-	strunpack(gs_szBuffer, szQuery);
-	
-	DB::Debug("(db_prepare=%d) Preparing statement with %d params: %s", _:stStatement, i, gs_szBuffer);
+		strunpack(gs_szBuffer, szQuery);
+		
+		DB::Debug("(db_prepare=%d) Preparing statement with %d params: %s", _:stStatement, i, gs_szBuffer);
 #endif
 		
-		strpack(gs_Statements[stStatement][e_szQuery], szQuery, DB::MAX_STATEMENT_SIZE);
+		strcat(gs_Statements[stStatement][e_szQuery], szQuery, DB::MAX_STATEMENT_SIZE);
 	} else {
 		DB::Debug("(db_prepare=%d) Preparing statement with %d params: %s", _:stStatement, i, szQuery);
 		
-		strcat(gs_Statements[stStatement][e_szQuery], szQuery, DB::MAX_STATEMENT_SIZE);
+		strpack(gs_Statements[stStatement][e_szQuery], szQuery, DB::MAX_STATEMENT_SIZE);
 	}
 	
 	return stStatement;
 }
 
-stock stmt_bind_value(&DBStatement:stStatement, iParam, DBDataType:iType, {Float, _}:...) {
+stock bool:stmt_bind_value(&DBStatement:stStatement, iParam, DBDataType:iType, {Float, _}:...) {
 	DB::LazyInitialize();
 	
 	new
@@ -1653,7 +1653,7 @@ stock stmt_bind_result_field(&DBStatement:stStatement, iField, DBDataType:iType,
 	DB::Debug("(stmt_bind_result_field:%d) Bound result field %d (type %d) to variable 0x%04x%04x.", _:stStatement, iField, _:iType, iAddress >>> 16, iAddress & 0xFFFF);
 }
 
-stock stmt_skip_row(&DBStatement:stStatement) {
+stock bool:stmt_skip_row(&DBStatement:stStatement) {
 	DB::LazyInitialize();
 	
 	if (stStatement == DB::INVALID_STATEMENT || !(0 <= _:stStatement < sizeof(gs_Statements))) {
@@ -1964,7 +1964,7 @@ stock bool:stmt_execute(&DBStatement:stStatement, bool:bStoreResult = true, bool
 	return true;
 }
 
-stock DBResult:stmt_free_result(&DBStatement:stStatement) {
+stock stmt_free_result(&DBStatement:stStatement) {
 	DB::LazyInitialize();
 	
 	if (stStatement == DB::INVALID_STATEMENT || !(0 <= _:stStatement < sizeof(gs_Statements))) {
@@ -2225,7 +2225,7 @@ stock db_get_field_assoc_hook(DBResult:dbresult, const field[], result[], maxlen
 	return retval;
 }
 
-stock db_dump_table(DB:db, const szTable[], const szFilename[]) {
+stock bool:db_dump_table(DB:db, const szTable[], const szFilename[]) {
 	static
 		s_szColumnName[256]
 	;
