@@ -740,7 +740,7 @@ stock db_set_struct_info(DB:db, {_, e_SQLITE3}:iOffset, iValue) {
 	#emit SREF.S.pri  iAddress
 }
 
-stock bool:db_set_row_index(DBResult:dbrResult, iRow) {
+stock db_set_row_index(DBResult:dbrResult, iRow) {
 	if (dbrResult == DB::INVALID_RESULT) {
 		DB::Notice("(db_set_row_index) Invalid result given.");
 		
@@ -904,7 +904,7 @@ stock db_is_result_freed(DBResult:dbrResult) {
 	return (iData == 0xFFFFFFFF);
 }
 
-stock bool:db_free_result_hook(DBResult:dbrResult) {
+stock db_free_result_hook(DBResult:dbrResult) {
 	if (dbrResult == DB::INVALID_RESULT) {
 		DB::Notice("(db_free_result_hook) Invalid result given.");
 		
@@ -1041,7 +1041,7 @@ stock db_set_asynchronous(DB:db, bool:bSet = true) {
 	db_set_synchronous(DB:db, bSet ? DB::SYNCHRONOUS_OFF : DB::SYNCHRONOUS_FULL);
 }
 
-stock bool:db_set_synchronous(DB:db, DB::e_SYNCHRONOUS_MODE:iValue) {
+stock db_set_synchronous(DB:db, DB::e_SYNCHRONOUS_MODE:iValue) {
 	if (0 <= _:iValue <= 2) {
 		format(gs_szBuffer, sizeof(gs_szBuffer), "PRAGMA synchronous = %d", _:iValue);
 	
