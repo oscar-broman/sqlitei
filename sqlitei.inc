@@ -1,7 +1,10 @@
 /*
-	SQLite Improved v0.9.5 by Slice
+	SQLite Improved v0.9.6 by Slice
 	
 	Changelog:
+			2013-10-07:
+				* Display errors from db_query. Works only on Windows.
+			
 			2012-07-23:
 				* Fix problem with persistent databases (hopefully).
 			
@@ -143,6 +146,32 @@
 
 #if !defined DB_LOG_TO_CHAT
 	#define DB_LOG_TO_CHAT  false
+#endif
+
+#if !defined DB_QUERY_ERRORS
+	#define DB_QUERY_ERRORS  false
+#endif
+
+#if !defined DB_PRINT_ERRORS
+	#define DB_PRINT_ERRORS  true
+#endif
+
+#if DB_QUERY_ERRORS
+	#tryinclude "amx_assembly\amx_header"
+	
+	#if !defined _inc_amx_header
+		#error amx_assembly is required for DB_QUERY_ERRORS. Get it here: github.com/zeex/amx_assembly
+	#endif
+
+	#include "amx_assembly\dynamic_call"
+	#include "amx_assembly\phys_memory"
+	#include "amx_assembly\windows\import_table"
+	#include "amx_assembly\shellcode"
+	#include "amx_assembly\os"
+
+	static stock VirtualProtect(addr, size, new_protect, &old_protect = 0);
+	static stock patch_db_query();
+	static stock db_get_error(DBResult:r, output[], maxlength = sizeof(output));
 #endif
 
 // "Namespace"
@@ -339,6 +368,9 @@ static stock
 	            gs_PersistentDatabases[DB::MAX_PERSISTENT_DATABASES][DB::E_PERSISTENT_DB],
 	            gs_iClosePersistentTimer = -1,
 	            gs_iFreeStatementResultsTimer = -1,
+#if DB_QUERY_ERRORS
+	            gs_szLastError[512],
+#endif
 	            gs_szNull[1] = {0}
 ;
 
@@ -2052,6 +2084,16 @@ stock DBResult:db_query_hook(iTagOf3 = tagof(_bAutoRelease), DB:db, const szQuer
 	} else {
 		bAutoRelease = _bAutoRelease;
 	}
+
+#if DB_QUERY_ERRORS	
+	static has_patched = false;
+
+	if (!has_patched) {
+		patch_db_query();
+		
+		has_patched = true;
+	}
+#endif
 	
 	if (db_is_persistent(db)) {
 		if (!db_is_valid_persistent(db)) {
@@ -2154,6 +2196,18 @@ stock DBResult:db_query_hook(iTagOf3 = tagof(_bAutoRelease), DB:db, const szQuer
 		dbrResult = db_query@(db, szQuery);
 	}
 	
+	#if DB_QUERY_ERRORS
+		if (db_get_error(dbrResult, gs_szLastError)) {
+			db_free_result(dbrResult);
+		
+			#if DB_PRINT_ERRORS
+				DB::Errorf("(db_query) %s", gs_szLastError);
+			#endif
+		
+			dbrResult = DBResult:0;
+		}
+	#endif
+	
 	if (dbrResult) {
 		if (bAutoRelease)
 			db_autofree_result(dbrResult);
@@ -2210,6 +2264,15 @@ stock DBResult:db_query_hook(iTagOf3 = tagof(_bAutoRelease), DB:db, const szQuer
 	}
 	
 	return dbrResult;
+}
+
+stock db_get_last_error() {
+	#if DB_QUERY_ERRORS
+		return gs_szLastError;
+	#else
+		static const retstr[] = "(unknown)";
+		return retstr;
+	#endif
 }
 
 stock db_get_field_hook(DBResult:dbresult, field, result[], maxlength = sizeof(result)) {
@@ -2844,6 +2907,171 @@ stock DB::GetAmxBase() {
 
 	return amx_base;
 }
+
+// phys_memory.inc
+static stock AbsToRel(addr) {
+	new dat;
+	#emit lctrl 1
+	#emit stor.s.pri dat
+	return addr - (GetAmxBaseAddress() + dat);
+}
+
+// This function has a bug in older amx_assembly versions
+static stock WritePhysMemoryCell_(addr, what) {
+	new rel_addr = AbsToRel(addr);
+	#emit load.s.pri what
+	#emit sref.s.pri rel_addr
+	#emit stack 4
+	#emit retn
+	return 0; // make compiler happy
+}
+
+#if DB_QUERY_ERRORS
+	static stock const PAGE_NOACCESS          =  0x01;
+	static stock const PAGE_READONLY          =  0x02;
+	static stock const PAGE_READWRITE         =  0x04;
+	static stock const PAGE_WRITECOPY         =  0x08;
+	static stock const PAGE_EXECUTE           =  0x10;
+	static stock const PAGE_EXECUTE_READ      =  0x20;
+	static stock const PAGE_EXECUTE_READWRITE =  0x40;
+	static stock const PAGE_EXECUTE_WRITECOPY =  0x80;
+	static stock const PAGE_GUARD             = 0x100;
+	static stock const PAGE_NOCACHE           = 0x200;
+	static stock const PAGE_WRITECOMBINE      = 0x400;
+
+	// https://github.com/Zeex/amx_assembly/blob/master/windows/ShellExecute.inc
+	static stock VirtualProtect(addr, size, new_protect, &old_protect = 0) {
+		/*
+		.text:10001000 55                                push    ebp
+		.text:10001001 8B EC                             mov     ebp, esp
+		.text:10001011 8B 4D 0C                          mov     ecx, [ebp+arg_4]
+		.text:10001014 8B 51 10                          mov     edx, [ecx+10h]
+		.text:10001017 52                                push    edx             ; lpflOldProtect
+		.text:10001018 8B 45 0C                          mov     eax, [ebp+arg_4]
+		.text:1000101B 8B 48 0C                          mov     ecx, [eax+0Ch]
+		.text:1000101E 51                                push    ecx             ; flNewProtect
+		.text:1000101F 8B 55 0C                          mov     edx, [ebp+arg_4]
+		.text:10001022 8B 42 08                          mov     eax, [edx+8]
+		.text:10001025 50                                push    eax             ; dwSize
+		.text:10001026 8B 4D 0C                          mov     ecx, [ebp+arg_4]
+		.text:10001029 8B 51 04                          mov     edx, [ecx+4]
+		.text:1000102C 52                                push    edx             ; lpAddress
+		.text:1000102D FF 15 78 56 34 12                 call    ds:VirtualProtect
+		.text:10001033 5D                                pop     ebp
+		.text:10001034 C3                                retn
+		*/
+
+		#define __(%0,%1,%2,%3) (((0x%3) << 24) | ((0x%2) << 16) | (0x%1 << 8) | (0x%0))
+
+		static const asm[] = {
+			__(90,90,90,90),
+			__(90,90,90,90),
+			__(90,90,90,90),
+			__(90,90,90,90),
+			__(55,8B,EC,90),
+			__(90,8B,4D,0C),
+			__(8B,51,10,52),
+			__(8B,45,0C,8B),
+			__(48,0C,51,8B),
+			__(55,0C,8B,42),
+			__(08,50,8B,4D),
+			__(0C,8B,51,04),
+			__(52,FF,15,00),
+			__(00,00,00,5D),
+			__(C3,CC,CC,CC)
+		};
+
+		#undef __
+
+		static address = -1;
+	
+		if (address == -1) {
+			address = GetImportAddress("VirtualProtect");
+			
+			WriteAmxMemory(ref(asm) + 51, refabs(address));
+		}
+
+		Push(addr);                  // LPVOID  lpAddress
+		Push(size);                  // SIZE_T  dwSize
+		Push(new_protect);           // DWORD   flNewProtect
+		Push(refabs(old_protect));   // PDWORD  lpflOldProtect
+	
+		return RunShellcode(refabs(asm));
+	}
+
+	static stock patch_db_query() {
+		if (!IsWindows()) {
+			return false;
+		}
+		
+		new addr = GetNativeAddressFromName("db_query");
+
+		if (!addr) {
+			printf("Unable to patch db_query: unable to get the address of db_query.");
+
+			return false;
+		}
+
+		// addr+144:
+		// JE SHORT 0044DCB7 -> JMP SHORT 0044DCB7
+		addr += 144;
+
+		new opcodes = ReadPhysMemoryCell(addr);
+
+		if (opcodes != 0xE8561574) {
+			printf("Unable to patch db_query: unexpected opcodes.");
+
+			return false;
+		}
+
+		new old_protect;
+
+		// Make it possible to write to "addr"
+		VirtualProtect(addr, 4, PAGE_EXECUTE_READWRITE, old_protect);
+		
+		// change JE to JMP
+		WritePhysMemoryCell_(addr, 0xEB | (ReadPhysMemoryCell(addr) & 0xFFFFFF00));
+
+		// Put the VirtualProtect back to what it was
+		VirtualProtect(addr, 4, old_protect);
+	
+		return true;
+	}
+	
+	static stock db_get_error(DBResult:r, output[], maxlength = sizeof(output)) {
+		if (!r) {
+			output[0] = '\0';
+			
+			return false;
+		}
+		
+	    // the error message is a char* in dbresult+12
+	    new errptr = ReadPhysMemoryCell(_:r + 12);
+
+	    if (errptr) {
+	    	new i = -1;
+
+			// read C string
+	    	do {
+				if (i >= maxlength - 1) {
+					output[maxlength - 1] = '\0';
+					break;
+				}
+				
+	    	    output[++i] = ReadPhysMemoryCell(errptr + i * 4);
+	    	    output[i] = swapchars(output[i]);
+	    	} while (strlen(output[i]) == 4);
+
+			strunpack(output, output, maxlength);
+			
+			return true;
+    	}
+		
+		output[0] = '\0';
+		
+		return false;
+	}
+#endif
 
 // Hook db_get_field
 // This is done lastly because the fixed function isn't needed within SQLitei
