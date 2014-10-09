@@ -1,7 +1,10 @@
 /*
-	SQLite Improved v0.9.6 by Slice
+	SQLite Improved v0.9.7 by Slice
 	
 	Changelog:
+			2014-10-08:
+				* Fix crash when using stmt_fetch_row on an empty result (only affects Linux servers).
+
 			2013-10-07:
 				* Display errors from db_query. Works only on Windows.
 			
@@ -608,7 +611,7 @@ stock DB::LazyInitialize() {
 	bIsInitialized = true;
 	
 	#if defined HTTP
-		HTTP(0x7FEDCBA0, HTTP_GET, !"spelsajten.net/sqlitei_version.php?version=095", "", !"DB_VersionCheckReponse");
+		HTTP(0x7FEDCBA0, HTTP_GET, !"spelsajten.net/sqlitei_version.php?version=097", "", !"DB_VersionCheckReponse");
 	#endif
 }
 
@@ -1732,6 +1735,12 @@ stock bool:stmt_fetch_row(&DBStatement:stStatement) {
 		if (!gs_Statements[stStatement][e_iFetchedRows])
 			DB::Warning("(stmt_fetch_row) Statement has no result.");
 		
+		return false;
+	}
+
+	if (!stmt_rows_left(stStatement)) {
+		DB::Debug("(stmt_fetch_row) No rows left.");
+
 		return false;
 	}
 	
