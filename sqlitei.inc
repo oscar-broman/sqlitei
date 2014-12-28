@@ -1,7 +1,10 @@
 /*
-	SQLite Improved v0.9.6 by Slice
+	SQLite Improved v0.9.7 by Slice
 	
 	Changelog:
+			2014-10-08:
+				* Fix crash when using stmt_fetch_row on an empty result (only affects Linux servers).
+
 			2013-10-07:
 				* Display errors from db_query. Works only on Windows.
 			
@@ -121,7 +124,7 @@
 #endif
 
 #if !defined DB_MAX_STATEMENTS
-	#define DB_MAX_STATEMENTS  64
+	#define DB_MAX_STATEMENTS  16
 #endif
 
 #if !defined DB_MAX_STATEMENT_SIZE
@@ -356,17 +359,15 @@ enum DB::E_PERSISTENT_DB {
 	  DB:e_dbDatabase
 };
 
-
-
 static stock
 	            gs_szBuffer[8192],
 	            gs_aiCompressBuffer[3072],
 	            gs_Statements[DBStatement:DB::MAX_STATEMENTS][DB::E_STATEMENT],
 	            gs_iAutoFreeTimer = -1,
 	            gs_iAutoFreeResultsIndex = 0,
-	   DBResult:gs_adbrAutoFreeResults[10000],
+	   DBResult:gs_adbrAutoFreeResults[1024],
 	            gs_iAutoCloseStatementsIndex = 0,
-	DBStatement:gs_astAutoCloseStatements[10000],
+	DBStatement:gs_astAutoCloseStatements[1024],
 	            gs_PersistentDatabases[DB::MAX_PERSISTENT_DATABASES][DB::E_PERSISTENT_DB],
 	            gs_iClosePersistentTimer = -1,
 	            gs_iFreeStatementResultsTimer = -1,
@@ -615,7 +616,7 @@ stock DB::LazyInitialize() {
 	bIsInitialized = true;
 	
 	#if defined HTTP
-		HTTP(0x7FEDCBA0, HTTP_GET, !"spelsajten.net/sqlitei_version.php?version=095", "", !"DB_VersionCheckReponse");
+		HTTP(0x7FEDCBA0, HTTP_GET, !"spelsajten.net/sqlitei_version.php?version=097", "", !"DB_VersionCheckReponse");
 	#endif
 }
 
@@ -1738,6 +1739,12 @@ stock bool:stmt_fetch_row(&DBStatement:stStatement) {
 		
 		return false;
 	}
+
+	if (!stmt_rows_left(stStatement)) {
+		DB::Debug("(stmt_fetch_row) No rows left.");
+
+		return false;
+	}
 	
 	if (!db_num_rows(gs_Statements[stStatement][e_dbrResult])) {
 		DB::Debug("(stmt_fetch_row) Freed previous result.");
@@ -1843,7 +1850,7 @@ stock bool:stmt_fetch_row(&DBStatement:stStatement) {
 				#emit STACK     20
 				
 				// Fix a bug with UTF-8 characters
-				// For example, 'รถ' would become 0xFFFFFFC3 instead of 0xC3
+				// For example, 'ö' would become 0xFFFFFFC3 instead of 0xC3
 				#emit PUSH.S     iAddress
 				#emit PUSH.C     sc_szFormatString
 				#emit PUSH.S     iSize
