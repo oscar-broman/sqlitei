@@ -1,10 +1,7 @@
 /*
-	SQLite Improved v0.9.7 by Slice
+	SQLite Improved v0.9.6 by Slice
 	
 	Changelog:
-			2014-10-08:
-				* Fix crash when using stmt_fetch_row on an empty result (only affects Linux servers).
-
 			2013-10-07:
 				* Display errors from db_query. Works only on Windows.
 			
@@ -124,7 +121,7 @@
 #endif
 
 #if !defined DB_MAX_STATEMENTS
-	#define DB_MAX_STATEMENTS  16
+	#define DB_MAX_STATEMENTS  64
 #endif
 
 #if !defined DB_MAX_STATEMENT_SIZE
@@ -359,15 +356,17 @@ enum DB::E_PERSISTENT_DB {
 	  DB:e_dbDatabase
 };
 
+
+
 static stock
 	            gs_szBuffer[8192],
 	            gs_aiCompressBuffer[3072],
 	            gs_Statements[DBStatement:DB::MAX_STATEMENTS][DB::E_STATEMENT],
 	            gs_iAutoFreeTimer = -1,
 	            gs_iAutoFreeResultsIndex = 0,
-	   DBResult:gs_adbrAutoFreeResults[1024],
+	   DBResult:gs_adbrAutoFreeResults[10000],
 	            gs_iAutoCloseStatementsIndex = 0,
-	DBStatement:gs_astAutoCloseStatements[1024],
+	DBStatement:gs_astAutoCloseStatements[10000],
 	            gs_PersistentDatabases[DB::MAX_PERSISTENT_DATABASES][DB::E_PERSISTENT_DB],
 	            gs_iClosePersistentTimer = -1,
 	            gs_iFreeStatementResultsTimer = -1,
@@ -416,6 +415,11 @@ const
 
 // Has to be defined after statement functions.
 stock DBResult:db_query_hook(iTagOf3 = tagof(_bAutoRelease), DB:db, const szQuery[], {bool, DBDataType}:_bAutoRelease = true, {DBDataType, QQPA}:...);
+
+// forward's
+forward bool:db_set_row_index(DBResult:dbrResult, iRow);
+forward bool:db_free_result_hook(DBResult:dbrResult);
+forward bool:db_set_synchronous(DB:db, DB::e_SYNCHRONOUS_MODE:iValue);
 
 forward DB::funcinc();
 public DB::funcinc() {
@@ -611,7 +615,7 @@ stock DB::LazyInitialize() {
 	bIsInitialized = true;
 	
 	#if defined HTTP
-		HTTP(0x7FEDCBA0, HTTP_GET, !"spelsajten.net/sqlitei_version.php?version=097", "", !"DB_VersionCheckReponse");
+		HTTP(0x7FEDCBA0, HTTP_GET, !"spelsajten.net/sqlitei_version.php?version=095", "", !"DB_VersionCheckReponse");
 	#endif
 }
 
@@ -775,7 +779,6 @@ stock db_set_struct_info(DB:db, {_, e_SQLITE3}:iOffset, iValue) {
 	#emit SREF.S.pri  iAddress
 }
 
-forward bool:db_set_row_index(DBResult:dbrResult, iRow);
 stock bool:db_set_row_index(DBResult:dbrResult, iRow) {
 	if (dbrResult == DB::INVALID_RESULT) {
 		DB::Notice("(db_set_row_index) Invalid result given.");
@@ -940,7 +943,6 @@ stock db_is_result_freed(DBResult:dbrResult) {
 	return (iData == 0xFFFFFFFF);
 }
 
-forward bool:db_free_result_hook(DBResult:dbrResult);
 stock bool:db_free_result_hook(DBResult:dbrResult) {
 	if (dbrResult == DB::INVALID_RESULT) {
 		DB::Notice("(db_free_result_hook) Invalid result given.");
@@ -1078,7 +1080,6 @@ stock db_set_asynchronous(DB:db, bool:bSet = true) {
 	db_set_synchronous(DB:db, bSet ? DB::SYNCHRONOUS_OFF : DB::SYNCHRONOUS_FULL);
 }
 
-forward bool:db_set_synchronous(DB:db, DB::e_SYNCHRONOUS_MODE:iValue);
 stock bool:db_set_synchronous(DB:db, DB::e_SYNCHRONOUS_MODE:iValue) {
 	if (0 <= _:iValue <= 2) {
 		format(gs_szBuffer, sizeof(gs_szBuffer), "PRAGMA synchronous = %d", _:iValue);
@@ -1737,12 +1738,6 @@ stock bool:stmt_fetch_row(&DBStatement:stStatement) {
 		
 		return false;
 	}
-
-	if (!stmt_rows_left(stStatement)) {
-		DB::Debug("(stmt_fetch_row) No rows left.");
-
-		return false;
-	}
 	
 	if (!db_num_rows(gs_Statements[stStatement][e_dbrResult])) {
 		DB::Debug("(stmt_fetch_row) Freed previous result.");
@@ -1848,7 +1843,7 @@ stock bool:stmt_fetch_row(&DBStatement:stStatement) {
 				#emit STACK     20
 				
 				// Fix a bug with UTF-8 characters
-				// For example, 'ö' would become 0xFFFFFFC3 instead of 0xC3
+				// For example, 'รถ' would become 0xFFFFFFC3 instead of 0xC3
 				#emit PUSH.S     iAddress
 				#emit PUSH.C     sc_szFormatString
 				#emit PUSH.S     iSize
