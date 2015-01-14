@@ -417,6 +417,11 @@ const
 // Has to be defined after statement functions.
 stock DBResult:db_query_hook(iTagOf3 = tagof(_bAutoRelease), DB:db, const szQuery[], {bool, DBDataType}:_bAutoRelease = true, {DBDataType, QQPA}:...);
 
+// forward's
+forward bool:db_set_row_index(DBResult:dbrResult, iRow);
+forward bool:db_free_result_hook(DBResult:dbrResult);
+forward bool:db_set_synchronous(DB:db, DB::e_SYNCHRONOUS_MODE:iValue);
+
 forward DB::funcinc();
 public DB::funcinc() {
 	strcat(gs_szBuffer, "");
@@ -775,7 +780,6 @@ stock db_set_struct_info(DB:db, {_, e_SQLITE3}:iOffset, iValue) {
 	#emit SREF.S.pri  iAddress
 }
 
-forward bool:db_set_row_index(DBResult:dbrResult, iRow);
 stock bool:db_set_row_index(DBResult:dbrResult, iRow) {
 	if (dbrResult == DB::INVALID_RESULT) {
 		DB::Notice("(db_set_row_index) Invalid result given.");
@@ -940,7 +944,6 @@ stock db_is_result_freed(DBResult:dbrResult) {
 	return (iData == 0xFFFFFFFF);
 }
 
-forward bool:db_free_result_hook(DBResult:dbrResult);
 stock bool:db_free_result_hook(DBResult:dbrResult) {
 	if (dbrResult == DB::INVALID_RESULT) {
 		DB::Notice("(db_free_result_hook) Invalid result given.");
@@ -1078,7 +1081,6 @@ stock db_set_asynchronous(DB:db, bool:bSet = true) {
 	db_set_synchronous(DB:db, bSet ? DB::SYNCHRONOUS_OFF : DB::SYNCHRONOUS_FULL);
 }
 
-forward bool:db_set_synchronous(DB:db, DB::e_SYNCHRONOUS_MODE:iValue);
 stock bool:db_set_synchronous(DB:db, DB::e_SYNCHRONOUS_MODE:iValue) {
 	if (0 <= _:iValue <= 2) {
 		format(gs_szBuffer, sizeof(gs_szBuffer), "PRAGMA synchronous = %d", _:iValue);
