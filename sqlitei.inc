@@ -147,6 +147,22 @@
 	#define DB_DEBUG  false
 #endif
 
+#if !defined DB_DEBUG_BACKTRACE_NOTICE
+	#define DB_DEBUG_BACKTRACE_NOTICE  false
+#endif
+
+#if !defined DB_DEBUG_BACKTRACE_WARNING
+	#define DB_DEBUG_BACKTRACE_WARNING  false
+#endif
+
+#if !defined DB_DEBUG_BACKTRACE_ERROR
+	#define DB_DEBUG_BACKTRACE_ERROR  false
+#endif
+
+#if !defined DB_DEBUG_BACKTRACE_DEBUG
+	#define DB_DEBUG_BACKTRACE_DEBUG  false
+#endif
+
 #if !defined DB_LOG_TO_CHAT
 	#define DB_LOG_TO_CHAT  false
 #endif
@@ -387,15 +403,36 @@ const
 #endif
 
 #if !DB_LOG_TO_CHAT
-	#define DB_Notice(%1)    print(!"SQLitei Notice: " %1)
-	#define DB_Warning(%1)   print(!"SQLitei Warning: " %1)
-	#define DB_Error(%1)     print(!"SQLitei Error: " %1)
-	#define DB_Noticef(%1)   printf("SQLitei Notice: " %1)
-	#define DB_Warningf(%1)  printf("SQLitei Warning: " %1)
-	#define DB_Errorf(%1)    printf("SQLitei Error: " %1)
+	#if DB_DEBUG_BACKTRACE_NOTICE
+		#define DB_Notice(%1)    print(!"SQLitei Notice: " %1),PrintAmxBacktrace()
+		#define DB_Noticef(%1)   printf("SQLitei Notice: " %1),PrintAmxBacktrace()
+	#else
+		#define DB_Notice(%1)    print(!"SQLitei Notice: " %1)
+		#define DB_Noticef(%1)   printf("SQLitei Notice: " %1)
+	#endif
+
+	#if DB_DEBUG_BACKTRACE_WARNING
+		#define DB_Warning(%1)   print(!"SQLitei Warning: " %1),PrintAmxBacktrace()
+		#define DB_Warningf(%1)  printf("SQLitei Warning: " %1),PrintAmxBacktrace()
+	#else
+		#define DB_Warning(%1)   print(!"SQLitei Warning: " %1)
+		#define DB_Warningf(%1)  printf("SQLitei Warning: " %1)
+	#endif
+
+	#if DB_DEBUG_BACKTRACE_ERROR
+		#define DB_Error(%1)     print(!"SQLitei Error: " %1),PrintAmxBacktrace()
+		#define DB_Errorf(%1)    printf("SQLitei Error: " %1),PrintAmxBacktrace()
+	#else
+		#define DB_Error(%1)     print(!"SQLitei Error: " %1)
+		#define DB_Errorf(%1)    printf("SQLitei Error: " %1)
+	#endif
 	
 	#if DB_DEBUG
-		#define DB_Debug(%1)  printf("SQLitei Debug: " %1)
+		#if DB_DEBUG_BACKTRACE_DEBUG
+			#define DB_Debug(%1)  printf("SQLitei Debug: " %1),PrintAmxBacktrace()
+		#else
+			#define DB_Debug(%1)  printf("SQLitei Debug: " %1)
+		#endif
 	#endif
 #else
 	new
