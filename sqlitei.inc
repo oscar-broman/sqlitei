@@ -374,7 +374,7 @@ const
 ;
 
 #if !DB_DEBUG
-	#define DB_Debug(%1);
+	#define DB_Debug(%1)%0;
 #endif
 
 #if !DB_LOG_TO_CHAT
@@ -427,7 +427,7 @@ const
 #endif
 
 // Has to be defined after statement functions.
-stock DBResult:db_query_hook(iTagOf3 = tagof(_bAutoRelease), DB:db, const szQuery[], {bool, DBDataType}:_bAutoRelease = true, {DBDataType, QQPA}:...);
+forward DBResult:db_query_hook(iTagOf3 = tagof(_bAutoRelease), DB:db, const szQuery[], {bool, DBDataType}:_bAutoRelease = true, {DBDataType, QQPA}:...);
 
 // forward's
 forward bool:db_set_row_index(DBResult:dbrResult, iRow);
