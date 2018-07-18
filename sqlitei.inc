@@ -2,6 +2,9 @@
 	SQLite Improved v0.9.7 by Slice
 	
 	Changelog:
+			2018-07-18:
+				* Removed some unused(dead) codes.
+
 			2015-07-13:
 				* Update for 0.3.7 R2.
 				* All crash issues should be solved now, including the previous one that happened only on some servers.
@@ -1030,10 +1033,10 @@ stock bool:db_free_result_hook(DBResult:dbrResult) {
 		#emit SREF.S.pri  iFreeTestAddress
 		
 		return true;
-	} else {
-		DB::Warning("(db_free_result) Attempted to free an already freed result; crash prevented.");
 	}
-	
+
+	DB::Warning("(db_free_result) Attempted to free an already freed result; crash prevented.");
+
 	return false;
 }
 
@@ -1090,8 +1093,9 @@ stock bool:db_set_synchronous(DB:db, DB::e_SYNCHRONOUS_MODE:iValue) {
 		format(gs_szBuffer, sizeof(gs_szBuffer), "PRAGMA synchronous = %d", _:iValue);
 	
 		return db_exec(db, gs_szBuffer);
-	} else
-		return false;
+	}
+
+	return false;
 }
 
 stock bool:db_attach_memory_db(DB:db, const szName[]) {
