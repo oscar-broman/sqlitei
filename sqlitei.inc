@@ -626,26 +626,7 @@ stock DB::LazyInitialize() {
 		return;
 	
 	bIsInitialized = true;
-	
-	#if defined HTTP
-		HTTP(0x7FEDCBA0, HTTP_GET, !"spelsajten.net/sqlitei_version.php?version=097", "", !"DB_VersionCheckReponse");
-	#endif
 }
-
-#if defined HTTP
-	forward DB::VersionCheckReponse(iIndex, iResponseCode, const szResponse[]);
-	public DB::VersionCheckReponse(iIndex, iResponseCode, const szResponse[]) {
-		if (iResponseCode == 200) {
-			if (strval(szResponse) != 1) {
-				print(!"\n\n\n  *******************************************************************");
-				print(      !"  *   There's a new version version of SQLite Improved available!   *");
-				print(      !"  * Please visit the topic at the SA-MP forums for the latest copy. *");
-				print(      !"  *  Alternatively, get it here: http://spelsajten.net/sqlitei.inc  *");
-				print(      !"  *******************************************************************\n\n\n");
-			}
-		}
-	}
-#endif
 
 stock db_escape_string(szString[], const szEnclosing[] = "'", iSize = sizeof(szString)) {
 	DB::LazyInitialize();
