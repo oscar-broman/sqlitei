@@ -182,9 +182,32 @@ native db_get_field_assoc@(DBResult:dbresult, const field[], result[], maxlength
 native db_close@(DB:db) = db_close;
 native db_free_result@(DBResult:dbrResult) = db_free_result;
 
+#if defined _ALS_db_open
+    #undef db_open 
+#else
+    #define _ALS_db_open
+#endif
 #define db_open        db_open@
+
+#if defined _ALS_db_query
+    #undef db_query 
+#else
+    #define _ALS_db_query
+#endif
 #define db_query%1(    db_query_hook(_,
+
+#if defined _ALS_db_close
+    #undef db_close 
+#else
+    #define _ALS_db_close
+#endif
 #define db_close       db_close_hook
+
+#if defined _ALS_db_free_result
+    #undef db_free_result 
+#else
+    #define _ALS_db_free_result
+#endif
 #define db_free_result db_free_result_hook
 
 #if DB::USE_WHIRLPOOL
@@ -1785,7 +1808,7 @@ stock bool:stmt_fetch_row(&DBStatement:stStatement) {
 				#emit STACK     20
 				
 				// Fix a bug with UTF-8 characters
-				// For example, 'ö' would become 0xFFFFFFC3 instead of 0xC3
+				// For example, '?' would become 0xFFFFFFC3 instead of 0xC3
 				#emit PUSH.S     iAddress
 				#emit PUSH.C     sc_szFormatString
 				#emit PUSH.S     iSize
